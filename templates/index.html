@@ -1,0 +1,61 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>ChatGPT</title>
+    <link rel="stylesheet" href="{{ url_for('static', filename="css/style.css") }}">
+    <link rel="stylesheet" href="../static/css/font-awesome-4.7.0/css/font-awesome.css">
+    <script type="text/javascript" src="{{ url_for('static', filename='script/script.js') }}"></script>
+</head>
+<body> 
+
+    <div class="alert" id="alert_start">
+        <span class="msg">Welcome to the Simulation! This is a choose your own adventure game, but you can make up<br>
+            any situation you want! To try it out, start by creating a scenario in the User Input box.<br>
+            Use thrid person for the best results. Then hit the “Generate” to illustrate your response.<br> <br>
+
+            Some examples:<br>  
+            ‘A small creature is walking through a moist dark forest.’<br>  
+            ‘A person is running along the top of the skyscrapers in a shiny city at sunset.’<br>
+            ‘The dragon roams through the bright red caves.’<br><br>
+
+            After receiving a response, you will be able to enter another response in the <br>
+            User Prompt area once again to continue the story how you like.
+        </span>
+        <span class="close-btn" id="close-start">
+            <i class="fa fa-times"></i>
+        </span>
+    </div>
+
+    <div class="alert hide" id="UI-info-alert">
+        <span class="msg">This is the User Input box. If it is the first message of the <br>
+            simulation, start of with something along the lines of the examples below.<br><br>
+
+            ‘A small creature is walking through a moist dark forest.’<br>
+            ‘I am running along the top of the skyscrapers in a shiny city at sunset.’<br>
+            ‘The dragon roams through the bright red caves.’<br><br>
+            After the generative AI has responded with a picture and text illustrating <br>
+            your creative simulation, you can respond in this text box to continue the <br>
+            simulation, for example explain a next step you would like to see happen. This<br>
+            will create a new image and response, and there is no ability to go back to <br>
+            the previous image and response
+        </span>
+        <span class="close-btn" id="close-UI">
+            <i class="fa fa-times"></i>
+        </span>
+    </div>
+
+    <h1>Simulation</h1>
+    <label id="UI">User Input</label>
+    <i class="fa fa-info" id="UI-info" aria-hidden="true"></i>
+    <form id="prompt-form">
+        <!-- <button type="submit" id="submit">Generate</button> -->
+        <button type="button" id="chatgpt-button">Generate</button>
+        <textarea name="text" id="user-prompt" wrap="soft"> </textarea>
+    </form>
+    <div id="response-container"> </div>
+
+    <button id="restart">Start from scratch</button>
+
+</body>
+</html>
