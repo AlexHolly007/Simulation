@@ -2,8 +2,7 @@ from flask import Flask, request, render_template, jsonify
 import os
 import openai
 
-#openai.organization = "org-66fOOihbBhRRMQ8kDRU9qoJY"
-openai.api_key_path = 'templates/key.txt'
+openai.api_key_path = 'key.txt'
 
 app = Flask(__name__)
 
