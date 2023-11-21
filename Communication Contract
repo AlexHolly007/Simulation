@@ -8,8 +8,9 @@ REQUESTING DATA --
 
 EXAMPLES-------
     Javascript call
-'''js
-            testForm.addEventListener('submit', function (event) {
+
+'''
+    testForm.addEventListener('submit', function (event) {
         event.preventDefault();
         //const userPrompt = document.getElementById('user-prompt');
         //const locations = {original: userPrompt.value};
