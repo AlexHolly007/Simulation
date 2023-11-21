@@ -9,7 +9,7 @@ REQUESTING DATA --
 EXAMPLES-------
     Javascript call
 
-'''
+'''ruby
     testForm.addEventListener('submit', function (event) {
         event.preventDefault();
         //const userPrompt = document.getElementById('user-prompt');
