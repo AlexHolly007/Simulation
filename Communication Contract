@@ -4,9 +4,8 @@ This is a flask service that can be deployed onto your local computer and will r
 
 REQUESTING DATA -- 
   A request is made to this serice in the way of a http post request. This can be sent through another API, or directly from javascript.
-  The service is expecting a JSON dictionary that includes lat1, lat2, lon1, and lon2 values within its key pairs
+  The service is expecting a JSON dictionary that includes 'lat1', 'lat2', 'lon1', and 'lon2' keys. Each with its corresponding value.
 
-EXAMPLES-------
     Javascript call with flask
 
         const formData = {
@@ -63,5 +62,8 @@ which is 'result'. The value of this key will be the distance between the two po
     Flask API call
 
           response = requests.post('http://localhost:12121/modify_data', json=data)
-          
-    
+
+
+
+UML SEQUENCE
+
