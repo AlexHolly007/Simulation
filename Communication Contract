@@ -7,13 +7,8 @@ REQUESTING DATA --
   The service is expecting a JSON dictionary that includes lat1, lat2, lon1, and lon2 values within its key pairs
 
 EXAMPLES-------
-    Javascript call
+    Javascript call with flask
 
-'''ruby
-    testForm.addEventListener('submit', function (event) {
-        event.preventDefault();
-        //const userPrompt = document.getElementById('user-prompt');
-        //const locations = {original: userPrompt.value};
         const formData = {
             lat1: document.getElementById('lat1').value,
             lon1: document.getElementById('lon1').value,
@@ -22,6 +17,32 @@ EXAMPLES-------
         };
 
         fetch('/make_request', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+            },
+            body: JSON.stringify(formData), //this line adds the data into the body of the request
+        }
+
+  Flask API call
+
+        data = {
+            lat1: lat1value,
+            lon1: lon1value,
+            lat2: lat2value,
+            lon2: lon2value
+        };
+
+        response = requests.post('http://localhost:12121/modify_data', json=data)
+        ## This URL should match the port number that this microservice is deployed on your computer.
+          
+RECEIVING DATA --
+The outputed data will be sent back in a JSON dictionary. It will only have one key
+which is 'result'. The value of this key will be the distance between the two points in miles.
+
+    Javascript call with flask
+
+                 fetch('/make_request', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -38,7 +59,9 @@ EXAMPLES-------
                 responseContainer.innerHTML += error;
                 console.error('Error:', error);
             });
-    })
-'''
+
+    Flask API call
+
+          response = requests.post('http://localhost:12121/modify_data', json=data)
           
-RECEIVING DATA --
+    
