@@ -11,8 +11,9 @@
 
     <div class="alert" id="alert_start">
         <span class="msg">Welcome to the Simulation! This is a choose your own adventure game, but you can make up<br>
-            any situation you want! To try it out, start by creating a scenario in the User Input box.<br>
-            Use thrid person for the best results. Then hit the “Generate” to illustrate your response.<br> <br>
+            any situation you want! To try it out, start by creating a scenario in the User Input box. Use <br>
+            third person for the best results. Then hit the “Generate” to illustrate your response. This will<br>
+            clear your previous entry and allow you to continue the story off of the computer generated response. <br><br>
 
             Some examples:<br>  
             ‘A small creature is walking through a moist dark forest.’<br>  
@@ -20,7 +21,10 @@
             ‘The dragon roams through the bright red caves.’<br><br>
 
             After receiving a response, you will be able to enter another response in the <br>
-            User Prompt area once again to continue the story how you like.
+            User Prompt area once again to continue the story how you like.<br><br>
+
+            This button in the bottom right is used to 'reset'------------------------------------------------ ><br>
+            this simulation, clearing all previous entrys and memory and restarts a blank adventure.
         </span>
         <span class="close-btn" id="close-start">
             <i class="fa fa-times"></i>
@@ -45,17 +49,54 @@
         </span>
     </div>
 
+    <div class="alert hide" id="restart-info">
+        <span class="msg"> This button is used to restart the simulation. All memory is cleared form<br>
+        the current adventure. The User can then input a new situation to start form<br>
+        the beginning again.
+        </span>
+        <span class="close-btn" id="close-restart">
+            <i class="fa fa-times"></i>
+        </span>
+    </div>
+
+    <div class="alert hide" id="tnkr-timeout">
+        <span class="msg"> I've noticed you've been on the same playthrough for a while now.<br>
+            You can restart the game with a new idea using the 'Start from scratch'<br>
+            button in the bottom right. This will clear all previous memory.
+        </span>
+        <span class="close-btn" id="tnkr-close-btn">
+            <i class="fa fa-times"></i>
+        </span>
+    </div>
+
+    <div class="alert hide" id="end-play">
+        <span class="msg"> Unfortunatley these playthroughs become expensive to pay for as you <br>
+            get farther into a single playthrough. So I am going to cut you off here. Feel free to <br>
+            start up a new story! Thanks.
+        </span>
+        <span class="close-btn" id="end-close-btn">
+            <i class="fa fa-times"></i>
+        </span>
+    </div>
+
+
     <h1>Simulation</h1>
     <label id="UI">User Input</label>
     <i class="fa fa-info" id="UI-info" aria-hidden="true"></i>
     <form id="prompt-form">
-        <!-- <button type="submit" id="submit">Generate</button> -->
+        <!--<button type="submit" id="submit">Test</button>-->
         <button type="button" id="chatgpt-button">Generate</button>
         <textarea name="text" id="user-prompt" wrap="soft"> </textarea>
     </form>
-    <div id="response-container"> </div>
+    <div id="response-container"> 
+        <div id="load" class=""></div>
+    </div>
+
+    <div id="imageContainer">
+    </div>
 
     <button id="restart">Start from scratch</button>
+    <i class="fa fa-info" id="restart-info-btn" aria-hidden="true"></i>
 
 </body>
 </html>
