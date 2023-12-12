@@ -18,7 +18,7 @@ This is a web application for a choose your own adventure game, except you can w
     
   Test this works by starting up the microservices using `python3 app.py` and `python3 Microservice.py`.
 
-### Setip - Step 1
+### Setup - Step 1
 
   -Create an Openai account and purchase credits that can be used from API calls. 
   This will come in the form of a monthly limit. Locate your API key.
