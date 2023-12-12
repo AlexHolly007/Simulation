@@ -2,7 +2,8 @@
 This is a web application for a choose your own adventure game, except you can write any situation you can think of.
 
 
-# Install
+# Install and Setup
+
 ### Install - Step 1
   Copy this repository into a directory within the local machine.
 
@@ -14,3 +15,8 @@ This is a web application for a choose your own adventure game, except you can w
   - Openai
   - Gunicorn
   - json
+    
+  Test this works by starting up the microservices using `python3 app.py` and `python3 Microservice.py`.
+
+### Setup - Step 1
+  
