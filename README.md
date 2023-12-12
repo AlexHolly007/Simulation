@@ -13,4 +13,4 @@ This is a web application for a choose your own adventure game, except you can w
   - Requests
   - Openai
   - Gunicorn
-  - 
+  - json
