@@ -10,4 +10,7 @@ This is a web application for a choose your own adventure game, except you can w
   Create a Python 3.10-3.11 environment using virtual environment.
   Install the required libraries via pip.
   - Flask
-  - Request
+  - Requests
+  - Openai
+  - Gunicorn
+  - 
