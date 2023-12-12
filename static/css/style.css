@@ -44,6 +44,12 @@ form > textarea {
     font-size: 15px;
     cursor: pointer;
 }
+#restart-info-btn{
+    color: rgb(103, 142, 113);
+    font-size: 15px;
+    cursor: pointer;
+    margin-left: 1%;
+}
 form {
     align-items: center;
     margin-top: 45px;
@@ -66,10 +72,33 @@ form {
     text-align: center;
     padding: 10px;
 }
+#imageContainer{
+    width: 90%;
+    font-size: 20px;
+    color: rgb(107, 154, 119);
+    display: inline-block;
+    margin-top: 20px;
+    margin-left: 5%;
+    align-self: center;
+    text-align: center;
+    padding: 10px;
+}
+.loader {
+    border: 16px solid #f3f3f3; /* Light grey */
+    border-top: 16px solid #3498db; /* Blue */
+    border-radius: 50%;
+    width: 120px;
+    height: 120px;
+    animation: spin 2s linear infinite;
+}
+  
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
 
 #restart {
     margin-left: 75%;
-    margin-top: 20%;
     border: solid 5px rgb(249, 118, 57);
     color: rgb(249, 118, 57);
     font-size: 22px;
