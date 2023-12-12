@@ -180,6 +180,8 @@ document.addEventListener('DOMContentLoaded', function () {
         const userPrompt = document.getElementById('user-prompt');
         userPrompt.value = '';
         responseContainer.innerHTML = '';
+        var container = document.getElementById('imageContainer');
+        container.innerHTML = '';
         backstory = [{"role": "system", "content": "You are creating a story\
         with the user. You should add something to the story and read it back as \
         a continuation of the story, keep responses short, under 60 words"}];
