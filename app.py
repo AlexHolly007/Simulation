@@ -1,5 +1,5 @@
 # Written by  Alex Holly
-# Description: This is the main file for the Simulation service file. This will connect
+# Description: This is the main file for the Simulation service. This will connect
 #     the javascript to the microservice, openai-gpt engines responses, and stable diffusion responses.
 #     This file uses http post requests when requesting information from other API and returns JSON bodys that
 #     include the needed responses
