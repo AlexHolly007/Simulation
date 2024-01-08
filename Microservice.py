@@ -20,6 +20,8 @@ def main():
 ###
 ## This input to this function is a dictionary containing strings along with a probability for each string
 ## example input - {'apple': .3, 'orange': .5}
+## This function will select one of the strings based on the probabilities given (it will always return one) by means
+## of a JSON dictionary body reply.
 @app.route('/random_num', methods=['POST'])
 def modify_data():
     itemsAndProbabilities = request.get_json()
