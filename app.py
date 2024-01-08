@@ -1,3 +1,11 @@
+# Written by  Alex Holly
+# Description: This is the main file for the Simulation service file. This will connect
+#     the javascript to the microservice, openai-gpt engines responses, and stable diffusion responses.
+#     This file uses http post requests when requesting information from other API and returns JSON bodys that
+#     include the needed responses
+#########
+#########
+
 from flask import Flask, request, render_template, jsonify
 
 import json, requests
@@ -13,6 +21,8 @@ app = Flask(__name__)
 @app.route("/")
 def main():
     return render_template('index.html')
+
+
 
 
 ###
@@ -33,6 +43,8 @@ def make_request():
         return modified_data, 200
     else:
         return jsonify({'message': 'Request failed', 'status_code': response.status_code}), response.status_code
+
+
 
 
 ###
@@ -79,6 +91,8 @@ def generate_response():
     backstory.append({'role': 'assistant', 'content': f'{response.choices[0].message.content}'})
     print('\nDONE WITH GPT API SENDING BACK TO JAVA\n')
     return jsonify({'response': f'{response.choices[0].message.content}', 'backstory': backstory})
+
+
 
 
 ####
