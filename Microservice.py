@@ -1,3 +1,8 @@
+# Written by  Alex Holly
+# Description: This is the microservice file for the Simulation service. This only has one api function
+#     which is used to choose an item at chance from an incomming http post request containing a dictionary.
+#########
+#########
 from flask import Flask, request, render_template, jsonify
 import random
 
@@ -9,6 +14,12 @@ app = Flask(__name__)
 def main():
     return "hello world"
 
+
+
+##
+###
+## This input to this function is a dictionary containing strings along with a probability for each string
+## example input - {'apple': .3, 
 @app.route('/random_num', methods=['POST'])
 def modify_data():
     itemsAndProbabilities = request.get_json()
