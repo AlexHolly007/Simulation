@@ -1,4 +1,4 @@
-# Written by  Alex Holly
+# Written by Alex Holly
 # Description: This is the microservice file for the Simulation service. This only has one api function
 #     which is used to choose an item at chance from an incomming http post request containing a dictionary.
 #########
