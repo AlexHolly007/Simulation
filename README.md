@@ -14,7 +14,6 @@ This is a web application for a choose your own adventure game, except you can w
   - Requests
   - Openai==0.28
   - Gunicorn
-  - json
     
   Test this works by starting up the microservices using `python3 app.py` and `python3 Microservice.py`.
 
