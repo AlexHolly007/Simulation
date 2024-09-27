@@ -12,7 +12,7 @@ This is a web application for a choose your own adventure game, except you can w
   Install the required libraries via pip.
   - Flask
   - Requests
-  - Openai
+  - Openai==0.28
   - Gunicorn
   - json
     
