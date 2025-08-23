@@ -1,7 +1,6 @@
 var count = 0;
-var backstory = [{"role": "system", "content": "You are creating a story\
-with the user. You should add something to the story and read it back as \
-a continuation of the story, keep responses short, under 60 words"}];
+var chat_history = [];
+var story_state = {}
 var picture_style;
 //Setting up some global variables that will be changed throughout the course of a playthrough
 
@@ -13,7 +12,7 @@ document.addEventListener('DOMContentLoaded', function () {
     // getPictureStyle utilized the microservice by making an api http request
     // A single string is returned that contains the picture style to be used in the image generation.
     function getPictureStyle() {
-        fetch('/make_request', {
+        fetch('/first_pic', {
             method: 'POST',
             headers: {
                 'Content-Type': 'application/json',
@@ -56,9 +55,10 @@ document.addEventListener('DOMContentLoaded', function () {
             method: 'POST',
             body: JSON.stringify({
                 'user_input': userPrompt.value, 
-                'backstory': backstory,
-                // The backstory is saved so open ai can create a response based on the history of the story
-                // Insted of only being able to look at the last response. 'backstory' is a global variable. 
+                'chat_history': chat_history,
+                'story_state': story_state,
+                // The Chat_history is saved so open ai can create a response based on the history of the story
+                // Insted of only being able to look at the last response. 'chat_history' is a global variable. 
             }),
             headers: {
                 'Content-Type': 'application/json',
@@ -66,9 +66,10 @@ document.addEventListener('DOMContentLoaded', function () {
         })
         .then(response => response.json())
         .then(async data => { //The response data is sent to the html responce container.
-            await get_picture(data.response, picture_style);
+            // await get_picture(data.response, picture_style);
             responseContainer.innerHTML = `<p>${data.response}</p><div id="load" class=""></div>`;
-            backstory = data.backstory;
+            chat_history = data.chat_history;
+            story_state = data.story_state
             userPrompt.value = '';
             userPrompt.placeholder = 'Enter a continuation of the story...';
         });
@@ -182,9 +183,7 @@ document.addEventListener('DOMContentLoaded', function () {
         responseContainer.innerHTML = '';
         var container = document.getElementById('imageContainer');
         container.innerHTML = '';
-        backstory = [{"role": "system", "content": "You are creating a story\
-        with the user. You should add something to the story and read it back as \
-        a continuation of the story, keep responses short, under 60 words"}];
+        chat_history = [];
         getPictureStyle();
     })
 

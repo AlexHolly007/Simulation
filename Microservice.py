@@ -8,13 +8,9 @@ import random
 
 app = Flask(__name__)
 
-
-
 @app.route("/")
 def main():
     return "hello world"
-
-
 
 ##
 ###
@@ -26,11 +22,12 @@ def main():
 def modify_data():
     itemsAndProbabilities = request.get_json()
     print(f"BEEN HIT WITH REQUEST")
-    print(f"cordinate keys{itemsAndProbabilities.keys()}") #check
+    #print(f"cordinate keys{itemsAndProbabilities.keys()}") #check
 
     # Choose an item based on probability
     chosen_item = choose_item(itemsAndProbabilities)
 
+    print(f'Choosen Item: {chosen_item}')
     # Return the chosen item
     modified_data = {'result': chosen_item}
     return jsonify(modified_data)

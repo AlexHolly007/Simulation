@@ -7,14 +7,14 @@
 #########
 
 from flask import Flask, request, render_template, jsonify
+import requests, json
+from openai import OpenAI
+from dotenv import load_dotenv
 
-import json, requests
-import os
-import openai
-import base64
-
-## Retrieves api key to make OpenAi calls.
-openai.api_key_path = 'openai-key.txt'
+#loading api keys
+##create a .env file containing OPENAI_API_KEY variable set to key
+load_dotenv()
+client = OpenAI()
 
 app = Flask(__name__)
 
@@ -29,8 +29,8 @@ def main():
 # Microservice function
 # Sends the pre-made list of picture styles to the micro to randomly 
 # select and return one based on the given probabilities
-@app.route('/make_request', methods=['POST'])
-def make_request():
+@app.route('/first_pic', methods=['POST'])
+def first_pic():
 
     data = {'japanese anime':0.6, 'realistic':0.1, 'cartoon':0.1, 'comic':0.2}
 
@@ -46,6 +46,88 @@ def make_request():
 
 
 
+#######
+# Called to generate a response given the background of the story
+# Sets the tone for the engine.
+def get_story_response(player_input, story_state, chat_history, next_occurence):
+    """
+    player_input: str - The player's latest action or dialogue
+    story_state: dict - Current story info (Location, Items, MainChar, NPCs, Goals)
+    background: str - Static world/lore description
+    chat_history: list - Previous turns, [{"role": "user"/"assistant", "content": "..."}]
+    """
+
+    #Building out the messege here
+    system_messages = [
+        {
+            "role": "system",
+            "content": (
+                "You are a storytelling engine for a text-based, choose-your-own-adventure game. \
+                Always write vivid immersive stories, but keep it simple so imagination can be up to \
+                the user, and dont get too poetic. Keep events consistent and dont present too many at once \
+                .Respond to the player's actions dynamically. Keep responses concise with less than 120 tokens."
+            )
+        },
+        {
+            "role": "system",
+            "content": f"STORE STATE:\n{story_state}"
+        },
+    ]
+
+    Output_intructions = [
+        {
+            "role": "system",
+            "content": f"CONTINUATION INSTRUCTION: {next_occurence}"
+        },
+        {
+            "role": "system",
+            "content": (
+                "OUTPUT INTRUCTIONS: 1. Story continuation using the CONTINUATION INSTRUCTION returned as normal text. 2. A  \
+                JSON block summarizing the new story state that has same fields as STORY STATE passed before (Location, \
+                Items, MainChar, NPCs, Goals). If those were empty, make them up using the user input \
+                Format:\n"
+                "---STORY---\n"
+                "<narrative text>\n"
+                "---STATE---\n"
+                "{ \"Location\": ..., \"Items\": [...], \"MainChar\": ..., \"NPCs\": [...] \"Goals\": [...] }"
+            )
+        }
+    ]
+
+    #Compile package to send
+    messages = system_messages + chat_history + [{"role": "user", "content": player_input}] + Output_intructions
+
+    #SEND HER OFF
+    response = client.chat.completions.create(
+        model="gpt-5", 
+        messages=messages,
+        #max_completion_tokens= 400,
+        #temperature=0.8,   unsupported for gpt 5
+    )
+
+    story_response = response.choices[0].message.content or ""
+
+    # print("STORY RESPONSE:", story_response)
+    # print("FULL RESPONSE:", response)
+
+    #Get response and story state response
+    if "---STATE---" in story_response:
+        story, state_json = story_response.split("---STATE---", 1)
+    else:
+        #if model fails with this format
+        story = story_response
+        state_json = "{}"
+
+    story = story.replace("---STORY---", "").strip()
+
+    try:
+        state_update = json.loads(state_json.strip())
+    except json.JSONDecodeError:
+        state_update = {}
+
+    return story, state_update
+
+
 
 ###
 # OpenAi response retrieval
@@ -54,43 +136,42 @@ def make_request():
 @app.route('/generate_response', methods=['POST'])
 def generate_response():
 
+    data = request.get_json()
+
+    chat_history = data.get('chat_history')
+    user_input = data.get('user_input')
+    story_state = data.get('story_state')
+
+    print("history:", chat_history)
+    print("story state: ",story_state)
+    print("input: ", user_input)
+
     ###
     ## The possible occurences to be sent to the microservice
     ## One will be selected and used for the response by the gpt response
     possible_occurences = {
         'a connection to a past part of the story': 0.2,
-        'nothing': 0.1,
-        'a spiney dragon with laser eyes': .01,
-        'a new freind': 0.2,
-        'a good occurance': 0.3,
-        'a minor inconvenience/obsticle': 0.2,
-        'a return to a previous part of the story': 0.1,
+        'the story has an unexpected change': 0.2,
+        'a spiney dragon with laser eyes appears': .01,
+        'a new friend appears': 0.2,
+        'a good occurance happens': 0.3,
+        'a minor inconvenience/obsticle': 0.3,
+        'a catastrophic obsticle has happened': 0.1,
+        'The story ends': 0.05,
     }
     occurence_response = requests.post('http://localhost:12121/random_num', json=possible_occurences)
     json_occurence = occurence_response.json()
     occurence = json_occurence.get('result')
     print(f"occurance response: {occurence}")
 
-    data = request.get_json()
-    backstory = data.get('backstory')
-    user_input = data.get('user_input')
-    print(backstory)
-    print(user_input)
-
     #
-    # Creates the message to be sent. Uses the backstory, the occurence, and the new user input.
-    messages = backstory + [{"role": "system", "content": f"Include setting details like characters species and location, and add {occurence}"}] \
-                            + [{"role": "user", "content": f"{user_input}"}]
-    
-    response = openai.ChatCompletion.create(
-        model="gpt-3.5-turbo",
-        messages=messages,
-        max_tokens=100 #Maximum response of 100 characters.
-    )
+    # Creates the message to be sent to open-ai. Uses the chat history, the occurence, and the new user input.  
+    story_response_text, story_state = get_story_response(user_input, story_state, chat_history, occurence)
 
-    backstory.append({'role': 'assistant', 'content': f'{response.choices[0].message.content}'})
-    print('\nDONE WITH GPT API SENDING BACK TO JAVA\n')
-    return jsonify({'response': f'{response.choices[0].message.content}', 'backstory': backstory})
+    chat_history.append({'role': 'assistant', 'content': story_response_text})
+
+    print('\nDONE WITH GPT API SENDING BACK TO JAVA FRONTEND\n')
+    return jsonify({'response': story_response_text, 'chat_history': chat_history, 'story_state': story_state})
 
 
 
