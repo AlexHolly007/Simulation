@@ -3,34 +3,54 @@
 #     Which is used to choose an item at chance from an incomming http post request containing a dictionary.
 #########
 #########
-from flask import Flask, request, render_template, jsonify
+
+from fastapi import FastAPI
+from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
+from pydantic import BaseModel
+from typing import Dict
 import random
+import uvicorn
 
-app = Flask(__name__)
+app = FastAPI()
 
-@app.route("/")
-def main():
-    return "hello world"
+# Serve static files (JS/CSS)
+app.mount("/static", StaticFiles(directory="static"), name="static")
+
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    with open("templates/index.html") as f:
+        return f.read()
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],       # allow all origins; replace "*" with your frontend URL in production
+    allow_credentials=True,
+    allow_methods=["*"],       # allow GET, POST, etc.
+    allow_headers=["*"],       # allow all headers
+)
+
+
+#define data input
+class Probabilities(BaseModel):
+    probs: Dict[str, float]
 
 ##
 ###
 ## This input to this function is a dictionary containing strings along with a probability for each string
 ## example input - {'apple': .3, 'orange': .5}
 ## This function will select one of the strings based on the probabilities given (it will always return one) by means
-## of a JSON dictionary body reply.
-@app.route('/random_num', methods=['POST'])
-def modify_data():
-    itemsAndProbabilities = request.get_json()
-    print(f"BEEN HIT WITH REQUEST")
-    #print(f"cordinate keys{itemsAndProbabilities.keys()}") #check
+@app.post("/random_num")
+def modify_data(data: Probabilities):
+    items_and_probs = data.probs
 
-    # Choose an item based on probability
-    chosen_item = choose_item(itemsAndProbabilities)
+    print("BEEN HIT WITH REQUEST")
+    chosen_item = choose_item(items_and_probs)
+    print(f"Chosen Item: {chosen_item}")
 
-    print(f'Choosen Item: {chosen_item}')
-    # Return the chosen item
-    modified_data = {'result': chosen_item}
-    return jsonify(modified_data)
+    return {"result": chosen_item}
 
 
 def choose_item(probabilities):
@@ -41,4 +61,6 @@ def choose_item(probabilities):
     return chosen_item
 
 if __name__ == "__main__":
-    app.run(debug=True, port=12121)
+    uvicorn.run("Microservice:app", host="127.0.0.1", port=12121, reload=True)
+
+#START UP WITH  python3 Microservice.py

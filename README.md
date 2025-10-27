@@ -1,35 +1,45 @@
 # Simulation-game
-This is a web application for a choose your own adventure game, except you can write any situation you can think of.
+
+This is a web application was created to explore the api use of openai. This game works by letting the user make up a story through an open ended user prompt. Openai models will respond with events that happen in your story and provide images describing the situation created. You will be able to respond on how the story continues in any way through the prompt.
+Trying to acheive a maximum open ended choose your own adventure.
+
 
 
 # Install and Setup
 
 ### Install - Step 1
-  Copy this repository into a directory within the local machine.
+
+Copy this repository into a directory within the local machine.
 
 ### Install - Step 2
-  Create a Python 3.10-3.11 environment using virtual environment.
-  Install the required libraries via pip.
-  - Flask
-  - Requests
-  - Openai==0.28
-  - Gunicorn
-    
-  Test this works by starting up the microservices using `python3 app.py` and `python3 Microservice.py`.
+
+Create a Python 3.11+ environment.
+Install the required libraries via pip.
+
+```
+pip install -r requirements.txt
+```
+
+Test this works by starting up the microservices using `python3 app.py` and `python3 Microservice.py`. These will need to be down for the next step.
 
 ### Setup - Step 1
 
-  -Create an Openai account and purchase credits that can be used from API calls. 
-  This will come in the form of a monthly limit. Locate your API key.
-  
-  -Create a Stablity.ai account, this should come with a few started credits, or feel
-  free to purchase more. Locate your API key.
+-Create an Openai Platform account, and receive your API key.
+
+There may be some starting credits, but i had to buy some for 5$. This was more than enough for many trails.
 
 ### Setup - Step 2
 
-  Create two files within the directory with the server files - 'openai-key.txt' and 'stable_key.txt'.
-  Copy and paste your Openai key in the 'openai-key.txt', then copy and past your stability.ai key into the
-  'stable_key.txt' file.
+Create a .env file with the contents below to allow openai to access your credits.
 
-  You are finished! Visit your site on the local host port where app.py is deployed to.
+```
+OPENAI_API_KEY=<Open ai key given>
+```
 
+### Setup - Step 3
+
+Run with Gunicorn
+
+```
+
+```

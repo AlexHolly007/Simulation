@@ -2,40 +2,57 @@ var count = 0;
 var chat_history = [];
 var story_state = {}
 var picture_style;
+var last_image_base64 = null;
+
+
 //Setting up some global variables that will be changed throughout the course of a playthrough
 
 document.addEventListener('DOMContentLoaded', function () {
     const user_prompt = document.getElementById('user-prompt');
     const responseContainer = document.getElementById('response-container');
+    const errorspot = document.getElementById('error-spot');
 
     //
     // getPictureStyle utilized the microservice by making an api http request
     // A single string is returned that contains the picture style to be used in the image generation.
-    function getPictureStyle() {
-        fetch('/first_pic', {
-            method: 'POST',
-            headers: {
-                'Content-Type': 'application/json',
-            },
-            body: JSON.stringify(''),
-        })
-        .then(response => response.json())
-        .then(data => {
-            picture_style = data['result'];// Saving the picture style for further use. It is a global variable.
-        })
-        .catch(error => { //error checking
-            responseContainer.innerHTML = error;
-            console.error('Error:', error);
-        });
+    async function getPictureStyle() {
+        const payload = {
+            probs: {
+                'japanese anime': 0.6,
+                'realistic': 0.1,
+                'cartoon': 0.1,
+                'comic': 0.2
+            }
+        };
+        // fetch microservice
+        try {
+            const response = await fetch('http://localhost:12121/random_num', {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify(payload)
+            });
+
+            if (!response.ok) {
+                const text = await response.text(); //get server error message
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+
+            const data = await response.json();
+            picture_style = data.result;
+        } catch (error) {
+            console.error("Error fetching picture style:", error)
+            errorspot.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        }
     }
     getPictureStyle();//This is called during startup to get the first picture style
 
 
     //
     // This is the main function that will take the user input and route it to the api, so a generative response
-    // can be made and returned into the html. 
+    // can be made and returned into the html.
     const chatgpt_button = document.getElementById('chatgpt-button');
-    chatgpt_button.addEventListener('click', function (event) {
+    chatgpt_button.addEventListener('click', async function (event) 
+    {
         event.preventDefault();
         responseContainer.innerHTML = '<div id="load" class="loader"></div>'
         count += 1; //This count and loop is set to remind users they can restart the playthrough. It goes off after three responses
@@ -51,62 +68,83 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         const userPrompt = document.getElementById('user-prompt');
 
-        fetch('/generate_response', {
-            method: 'POST',
-            body: JSON.stringify({
-                'user_input': userPrompt.value, 
-                'chat_history': chat_history,
-                'story_state': story_state,
-                // The Chat_history is saved so open ai can create a response based on the history of the story
-                // Insted of only being able to look at the last response. 'chat_history' is a global variable. 
-            }),
-            headers: {
-                'Content-Type': 'application/json',
-            },
-        })
-        .then(response => response.json())
-        .then(async data => { //The response data is sent to the html responce container.
-            // await get_picture(data.response, picture_style);
+        try {
+            const response = await fetch('/generate_response', {
+                method: 'POST',
+                body: JSON.stringify({
+                    'user_input': userPrompt.value, 
+                    'chat_history': chat_history,
+                    'story_state': story_state,
+                    // The Chat_history is saved so open ai can create a response based on the history of the story
+                    // Insted of only being able to look at the last response. 'chat_history' is a global variable. 
+                }),
+                headers: {'Content-Type': 'application/json',},
+            })
+
+            if (!response.ok) {
+                const text = await response.text(); //get server error message
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+
+            const data = await response.json()
+
+            //save the response to the textbox object
             responseContainer.innerHTML = `<p>${data.response}</p><div id="load" class=""></div>`;
+
+            //save the chat history (just like of responses). And the story state, which is small json of context
             chat_history = data.chat_history;
             story_state = data.story_state
+
+    
+            // Send the LAST IMAGE TO BUILD OFF, the history (we will use last 2 events), AND the story state to make image
+            // await get_picture(chat_history, story_state, picture_style, last_image_base64);
+
+            //reset user prompt
             userPrompt.value = '';
             userPrompt.placeholder = 'Enter a continuation of the story...';
-        });
+
+        } catch (error){
+            console.error("Error generating response:", error)
+            errorspot.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        }
     })
 
 
-    function get_picture(gpt_response, picture_style) {
-        return new Promise((resolve, reject) => {
-            fetch('/get_picture', {
+    async function get_picture(chat_hist, story, picture_style, last_image_base64) {
+        try{
+            const response = await fetch('/get_picture', {
                 method: 'POST',
                 body: JSON.stringify({
-                    'image_text': gpt_response,
+                    'chat_history': chat_hist,
+                    'story_state': story,
                     'style': picture_style,
+                    'last_image': last_image_base64,
                 }),
                 headers: {
                     'Content-Type': 'application/json',
                 },
-            })
-            .then(response => {
-                if (!response.ok) {
-                    throw new Error('Non-200 response');
-                }
-                return response.json();
-            })
-            .then(data => {
-                var img = new Image();
-                img.src = 'data:image/png;base64,' + data.image;
-    
-                var container = document.getElementById('imageContainer');
-                container.innerHTML = '';
-                container.appendChild(img);
-                resolve(data);
-            })
-            .catch(error => {
-                reject(error);
             });
-        });
+
+            if (!response.ok) {
+                const text = await response.text(); //get server error message
+                throw new Error(`HTTP ${response.status}: ${text}`);
+            }
+
+            //save image for next time
+            last_image_base64 = data.image;
+
+            // Display image
+            const img = new Image();
+            img.src = 'data:image/png;base64,' + data.image;
+            const container = document.getElementById('imageContainer');
+            container.innerHTML = '';
+            container.appendChild(img);
+
+            return data;
+        } catch (error) {
+            console.error("Error fetching image:", error)
+            errorspot.innerHTML = `<p style="color:red;">Error: ${error.message}</p>`;
+        }
     }
 
     //
@@ -183,7 +221,11 @@ document.addEventListener('DOMContentLoaded', function () {
         responseContainer.innerHTML = '';
         var container = document.getElementById('imageContainer');
         container.innerHTML = '';
+
         chat_history = [];
+        count = 0;
+        last_image_base64 = null;
+        story_state = {};
         getPictureStyle();
     })
 

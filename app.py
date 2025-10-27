@@ -6,44 +6,35 @@
 #########
 #########
 
-from flask import Flask, request, render_template, jsonify
-import requests, json
+from fastapi import FastAPI, Request
+from fastapi.responses import JSONResponse, HTMLResponse
+from fastapi.middleware.cors import CORSMiddleware
+from pydantic import BaseModel
+import requests, json, base64, tempfile, os
 from openai import OpenAI
 from dotenv import load_dotenv
+import uvicorn
 
 #loading api keys
 ##create a .env file containing OPENAI_API_KEY variable set to key
 load_dotenv()
 client = OpenAI()
 
-app = Flask(__name__)
+#app = Flask(__name__)
+app = FastAPI(title="Story Engine")
 
 @app.route("/")
 def main():
-    return render_template('index.html')
+    return "API endpoint for item simulation"
 
 
-
-
-###
-# Microservice function
-# Sends the pre-made list of picture styles to the micro to randomly 
-# select and return one based on the given probabilities
-@app.route('/first_pic', methods=['POST'])
-def first_pic():
-
-    data = {'japanese anime':0.6, 'realistic':0.1, 'cartoon':0.1, 'comic':0.2}
-
-    response = requests.post('http://localhost:12121/random_num', json=data)
-
-    if response.status_code == 200:
-        modified_data = response.json()
-        #
-        # Returns the data in a dictionary under key 'result'
-        return modified_data, 200
-    else:
-        return jsonify({'message': 'Request failed', 'status_code': response.status_code}), response.status_code
-
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],  # or your frontend domain
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 
 #######
@@ -62,34 +53,36 @@ def get_story_response(player_input, story_state, chat_history, next_occurence):
         {
             "role": "system",
             "content": (
-                "You are a storytelling engine for a text-based, choose-your-own-adventure game. \
-                Always write vivid immersive stories, but keep it simple so imagination can be up to \
-                the user, and dont get too poetic. Keep events consistent and dont present too many at once \
-                .Respond to the player's actions dynamically. Keep responses concise with less than 120 tokens."
+                "You are the engine for a text and image-based choose-your-own-adventure. "
+                "The user writes prompts to advance the story, and you describe vivid, concise outcomes based on their input and any provided continuation "
+                "The user is not part of the story unless explicitly stated. "
+                "You may introduce environmental or character actions when needed, but the user dictates direction most of the time. "
+                "Always match the user’s writing style, tone, and genre. Use common, natural language. "
+                "Keep responses under 120 tokens and describe only one clear event or change per turn. "
+                "Avoid asking questions; show possibilities through action and detail instead. "
+                "Maintain consistent pacing, tone, and formatting. "
+                "If the user gives unclear or meta input (not story-related), request clarification instead of advancing the story."
             )
-        },
-        {
-            "role": "system",
-            "content": f"STORE STATE:\n{story_state}"
-        },
+        }
     ]
 
     Output_intructions = [
         {
             "role": "system",
-            "content": f"CONTINUATION INSTRUCTION: {next_occurence}"
+            "content": f"CONTINUATION INSTRUCTION: {next_occurence} \n \
+                STORY STATE:\n{story_state}",
         },
         {
             "role": "system",
             "content": (
-                "OUTPUT INTRUCTIONS: 1. Story continuation using the CONTINUATION INSTRUCTION returned as normal text. 2. A  \
-                JSON block summarizing the new story state that has same fields as STORY STATE passed before (Location, \
-                Items, MainChar, NPCs, Goals). If those were empty, make them up using the user input \
+                "OUTPUT INTRUCTIONS: 1. normal narritive text return of story continuation using the CONTINUATION INSTRUCTION and user input.\n \
+                2. A JSON block updating the new story state after the continuation. This has format of the STORY STATE passed before (but potentially \
+                differnt values): Location, Characters. Can have empty values for things not yet established. \
                 Format:\n"
                 "---STORY---\n"
                 "<narrative text>\n"
                 "---STATE---\n"
-                "{ \"Location\": ..., \"Items\": [...], \"MainChar\": ..., \"NPCs\": [...] \"Goals\": [...] }"
+                "{ \"Location\": ..., \"Characters\": [...] }"
             )
         }
     ]
@@ -129,37 +122,42 @@ def get_story_response(player_input, story_state, chat_history, next_occurence):
 
 
 
+
+class GenerateRequest(BaseModel):
+    user_input: str
+    chat_history: list
+    story_state: dict
 ###
 # OpenAi response retrieval
 # Sends: The user input, along with the history of chats within this story
 # Returns: A generative text response based on the history of the OpenAI responses to create a cohesive story.
-@app.route('/generate_response', methods=['POST'])
-def generate_response():
+@app.post("/generate_response")
+def generate_response(data: GenerateRequest):
+    user_input = data.user_input
+    chat_history = data.chat_history
+    story_state = data.story_state
 
-    data = request.get_json()
-
-    chat_history = data.get('chat_history')
-    user_input = data.get('user_input')
-    story_state = data.get('story_state')
-
-    print("history:", chat_history)
+    print("\nhistory:", chat_history)
     print("story state: ",story_state)
-    print("input: ", user_input)
+    print("input: ", user_input.strip())
 
     ###
     ## The possible occurences to be sent to the microservice
     ## One will be selected and used for the response by the gpt response
     possible_occurences = {
-        'a connection to a past part of the story': 0.2,
-        'the story has an unexpected change': 0.2,
-        'a spiney dragon with laser eyes appears': .01,
-        'a new friend appears': 0.2,
-        'a good occurance happens': 0.3,
-        'a minor inconvenience/obsticle': 0.3,
-        'a catastrophic obsticle has happened': 0.1,
-        'The story ends': 0.05,
+        'make a connection to a past part of the story': 0.1,
+        'make the story have an unexpected change': 0.2,
+        'have a spiney dragon with laser eyes appear': .01,
+        'have a new friend appear': 0.2,
+        'have the story continue as normal': 0.7,
+        'make a good occurance happen': 0.2,
+        'make a minor inconvenience/obsticle': 0.3,
+        'make a catastrophic obsticle happen': 0.08,
+        'make the story tragically end': 0.05,
     }
-    occurence_response = requests.post('http://localhost:12121/random_num', json=possible_occurences)
+    occurence_response = requests.post('http://localhost:12121/random_num', 
+                                       json={"probs": possible_occurences})
+    
     json_occurence = occurence_response.json()
     occurence = json_occurence.get('result')
     print(f"occurance response: {occurence}")
@@ -168,64 +166,92 @@ def generate_response():
     # Creates the message to be sent to open-ai. Uses the chat history, the occurence, and the new user input.  
     story_response_text, story_state = get_story_response(user_input, story_state, chat_history, occurence)
 
+    print("story state 2: ",story_state)
+
     chat_history.append({'role': 'assistant', 'content': story_response_text})
 
-    print('\nDONE WITH GPT API SENDING BACK TO JAVA FRONTEND\n')
-    return jsonify({'response': story_response_text, 'chat_history': chat_history, 'story_state': story_state})
+    print('DONE WITH GPT API SENDING BACK TO JAVA FRONTEND\n')
+    return {"response": story_response_text, "chat_history": chat_history, "story_state": story_state}
 
 
 
 
+class PictureRequest(BaseModel):
+    chat_history: list
+    story_state: dict
+    style: str
+    last_image: str | None = None
 ####
-# Stability.ai API call to retrieve picture
-# Sends the story situation for context, along with randomly choosen picture style
-# Returns Json image that will be added into html within the javascript
-@app.route('/get_picture', methods=['POST'])
-def get_picture():
+# 
+#
+#
+#
+@app.post("/get_picture")
+def get_picture(data: PictureRequest):
+    #chat history and story state for image context
+    chat_history = data.chat_history
+    story_state = data.story_state
+    style = data.style
+    #last image to use same style, and character look
+    last_image_base64 = data.last_image
 
-    data = request.get_json()
-    image_text = data.get('image_text')
-    style = data.get('style')
-    print(f"style: {style}")
-    url = "https://api.stability.ai/v1/generation/stable-diffusion-v1-6/text-to-image"
+    context_text = ''
+    #there has been continuation
+    if len(chat_history) > 1:
+        story_summary = "\n--NEW ACTION-->>>".join(chat_history[-2:])  # use only the last 2 messages to save tokens
+        context_text = f"The story so far: LAST ACTION-->>{story_summary}\nStory State: {story_state}\nArt style: {style}"
+    
+    #This is the first user prompt
+    else:
+        story_summary = "NEW ACTION-->>>", chat_history[0] 
+        context_text = f"The story so far: {story_summary}\nStory State: {story_state}\nArt style: {style}"
 
-    body = {
-        "steps": 30,
-        "width": 512,
-        "height": 512,
-        "seed": 0,
-        "cfg_scale": 5,
-        "samples": 1,
-        "text_prompts": [
-            {"text": f"{image_text}, bright, ","weight": 1},
-            {"text": "blurry, splotchy, dark","weight": -1},
-            {"text": f"{style} style of image","weight": 0.2}
-        ],
-    }
+    last_image_path = None
+    if last_image_base64:
+        image_bytes = base64.b64decode(last_image_base64)
+        temp_file = tempfile.NamedTemporaryFile(delete=False, suffix=".png")
+        temp_file.write(image_bytes)
+        temp_file.close()
+        last_image_path = temp_file.name
 
-    with open('stable_key.txt', 'r') as file:
-        stable_key = file.read().strip()
-    headers = {
-        "Accept": "application/json",
-        "Content-Type": "application/json",
-        "Authorization": f"Bearer {stable_key}",
-    }
-    response = requests.post(
-        url,
-        headers=headers,
-        json=body,
-    )
+    #input of the context and the last image
+    gpt_image_prompt = f"You are a creative scene designer. This is an ongoing story, you need to generate the next image to give \
+                the user a visual of whats going on in their story using the given context. Generate the image based on the NEW ACTION, \
+                but If supplied an image and LAST ACTION, use the same style and make its continuation interpretable based off that image. \n \
+                CONTEXT: {context_text}"
 
-    if response.status_code != 200:
-        raise Exception("Non-200 response: " + str(response.text))
-    data = response.json()
-    image_base64 = data["artifacts"][0]["base64"]
+    img_response = None
+    new_image_base64 = None
+    #generate the image continue, or first image
+    if last_image_base64:
+        # if you want to visually reference the previous image for consistency
+        img_response = client.images.edit(
+            model="gpt-image-1",
+            prompt=gpt_image_prompt,
+            size="1024x1024",
+            image=[open(last_image_base64, "rb")]
+        )
 
-    print("\nDONE WITH PICTURE API, SENDING BACK TO SCRIPT\n")
-    return jsonify({"image": image_base64})
+    else:
+        #without a prior image
+        img_response = client.images.generate(
+            model="gpt-image-1",
+            prompt=gpt_image_prompt,
+            n=1,
+            size="1024x1024"
+        )
+
+    if img_response:
+        new_image_base64 = img_response.data[0].b64_json # type: ignore
+
+    #Clean up temporary image file
+    if last_image_path:
+        os.remove(last_image_path)
+
+    return ({"image": new_image_base64})
 
 
+if __name__ == "__main__":
+    uvicorn.run("app:app", host="127.0.0.1", port=45454, reload=True)
 
-
-if __name__ == '__main__': 
-    app.run(debug=True, port=45454)
+#START WITH python3 app.py
