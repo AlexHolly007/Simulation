@@ -6,8 +6,6 @@
 
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import HTMLResponse
-from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
 from typing import Dict
@@ -15,14 +13,6 @@ import random
 import uvicorn
 
 app = FastAPI()
-
-# Serve static files (JS/CSS)
-app.mount("/static", StaticFiles(directory="static"), name="static")
-
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    with open("templates/index.html") as f:
-        return f.read()
 
 app.add_middleware(
     CORSMiddleware,

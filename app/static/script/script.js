@@ -11,6 +11,7 @@ document.addEventListener('DOMContentLoaded', function () {
     const user_prompt = document.getElementById('user-prompt');
     const responseContainer = document.getElementById('response-container');
     const errorspot = document.getElementById('error-spot');
+    const img_container = document.getElementById('imageContainer');
 
     //
     // getPictureStyle utilized the microservice by making an api http request
@@ -54,7 +55,8 @@ document.addEventListener('DOMContentLoaded', function () {
     chatgpt_button.addEventListener('click', async function (event) 
     {
         event.preventDefault();
-        responseContainer.innerHTML = '<div id="load" class="loader"></div>'
+        responseContainer.innerHTML = '<p>Text Loading...</p><div id="load" class="loader"></div>';
+        img_container.innerHTML = '<p>Image Loading...</p><div id="load" class="loader"></div>';
         count += 1; //This count and loop is set to remind users they can restart the playthrough. It goes off after three responses
         if (count == 4) {
             const tnkr_msg = document.getElementById('tnkr-timeout');
@@ -68,16 +70,20 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         const userPrompt = document.getElementById('user-prompt');
 
+        const payload = {
+            // can be in quotes or not, for name of dict entries,
+            //      AS LONG AS ITS JSON/DICT format
+            user_input: userPrompt.value, 
+            "chat_history": chat_history,
+            story_state: story_state,
+            // The Chat_history is saved so open ai can create a response based on the history of the story
+            // Insted of only being able to look at the last response. 'chat_history' is a global variable. 
+        };
+
         try {
             const response = await fetch('/generate_response', {
                 method: 'POST',
-                body: JSON.stringify({
-                    'user_input': userPrompt.value, 
-                    'chat_history': chat_history,
-                    'story_state': story_state,
-                    // The Chat_history is saved so open ai can create a response based on the history of the story
-                    // Insted of only being able to look at the last response. 'chat_history' is a global variable. 
-                }),
+                body: JSON.stringify(payload),
                 headers: {'Content-Type': 'application/json',},
             })
 
@@ -86,18 +92,18 @@ document.addEventListener('DOMContentLoaded', function () {
                 throw new Error(`HTTP ${response.status}: ${text}`);
             }
 
-            const data = await response.json()
+            const data = await response.json();
 
             //save the response to the textbox object
             responseContainer.innerHTML = `<p>${data.response}</p><div id="load" class=""></div>`;
 
             //save the chat history (just like of responses). And the story state, which is small json of context
             chat_history = data.chat_history;
-            story_state = data.story_state
+            story_state = data.story_state;
 
-    
+            console.log("calling image picture maker from script gpt button func")
             // Send the LAST IMAGE TO BUILD OFF, the history (we will use last 2 events), AND the story state to make image
-            // await get_picture(chat_history, story_state, picture_style, last_image_base64);
+            await get_picture(chat_history, story_state, picture_style, last_image_base64);
 
             //reset user prompt
             userPrompt.value = '';
@@ -110,25 +116,32 @@ document.addEventListener('DOMContentLoaded', function () {
     })
 
 
-    async function get_picture(chat_hist, story, picture_style, last_image_base64) {
+    async function get_picture(chat_hist, story, picture_style, last_image) {
+        const payload = {
+            'chat_history': chat_hist,
+            'story_state': story,
+            'style': picture_style,
+            'last_image': last_image,      
+        }
+
         try{
             const response = await fetch('/get_picture', {
                 method: 'POST',
-                body: JSON.stringify({
-                    'chat_history': chat_hist,
-                    'story_state': story,
-                    'style': picture_style,
-                    'last_image': last_image_base64,
-                }),
+                body: JSON.stringify(payload),
                 headers: {
                     'Content-Type': 'application/json',
                 },
             });
 
+            console.log("call made to frontend");
+
             if (!response.ok) {
                 const text = await response.text(); //get server error message
                 throw new Error(`HTTP ${response.status}: ${text}`);
             }
+
+            const data = await response.json();
+            console.log("Picture response:", data);
 
             //save image for next time
             last_image_base64 = data.image;
@@ -136,9 +149,9 @@ document.addEventListener('DOMContentLoaded', function () {
             // Display image
             const img = new Image();
             img.src = 'data:image/png;base64,' + data.image;
-            const container = document.getElementById('imageContainer');
-            container.innerHTML = '';
-            container.appendChild(img);
+            img.loading = "lazy";
+            img_container.innerHTML = '';
+            img_container.appendChild(img);
 
             return data;
         } catch (error) {

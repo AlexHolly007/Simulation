@@ -1,0 +1,40 @@
+#docker-compose
+version: "3.9"
+
+#services, these are seperate containers that are going to be used in the image
+#give any name to the containers
+services:
+  main-and-static-frontend:
+    #build is needed, give the dockerfile, and what dir the dockerfile is in
+    build:
+      context: .
+      dockerfile: Dockerfile.app
+    
+    #name container to see once its build in docker
+    container_name: simulation_main_app
+
+    #need to specify ports. <outside port of docker deployment>:<port it forwards to on the containers>
+    #these are often the same, but can make it different
+    ports:
+      - "45454:45454"
+
+    #if it should wait on other services, this isnt needed here but wanted to test it out
+    depends_on:
+      - microservice-api
+
+    #can set environment variables in this container, 
+    #this isnt needed, but wanted to test it out, now i call the env var when calling microservice
+    environment:
+      - MICROSERVICE_URL=http://microservice:12121
+    
+    #automatic resart on crash
+    #restart: always
+
+  microservice-api:
+    build:
+      context: .
+      dockerfile: Dockerfile.micro
+    container_name: simulation_microservice
+    ports:
+      - "12121:12121"
+    restart: always

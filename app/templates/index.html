@@ -3,9 +3,12 @@
 <head>
     <meta charset="UTF-8">
     <title>StoryMode</title>
-    <link rel="stylesheet" href="{{ url_for('static', filename="css/style.css") }}">
-    <link rel="stylesheet" href="../static/css/font-awesome-4.7.0/css/font-awesome.css">
-    <script type="text/javascript" src="{{ url_for('static', filename='script/script.js') }}"></script>
+    <!-- CSS -->
+    <link rel="stylesheet" href="/static/css/style.css">
+    <link rel="stylesheet" href="/static/css/font-awesome-4.7.0/css/font-awesome.css">
+
+    <!-- JavaScript -->
+    <script type="text/javascript" src="/static/script/script.js"></script>
 </head>
 <body> 
 
@@ -89,17 +92,21 @@
         <textarea name="text" id="user-prompt" wrap="soft"> </textarea>
     </form>
     <div id="response-container"> 
-        <div id="load" class=""></div>
+        <div id="load" class="">
+            <p></p>
+        </div>
     </div>
 
-    <div id="imageContainer">
+    <div id="imageContainer" class="image-wrapper">
     </div>
 
     <div id="error-spot">
     </div>
 
-    <button id="restart">Start from scratch</button>
-    <i class="fa fa-info" id="restart-info-btn" aria-hidden="true"></i>
+    <div id="restart_box">
+        <i class="fa fa-info" id="restart-info-btn" aria-hidden="true"></i>
+        <button id="restart">Start from scratch</button>
+    </div>
 
 </body>
 </html>

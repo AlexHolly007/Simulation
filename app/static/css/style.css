@@ -71,38 +71,67 @@ form {
     align-self: center;
     text-align: center;
     padding: 10px;
-}
-#imageContainer{
-    width: 90%;
-    font-size: 20px;
-    color: rgb(107, 154, 119);
-    display: inline-block;
-    margin-top: 20px;
-    margin-left: 5%;
-    align-self: center;
+
+    display: flex;
+    flex-direction: column;    
+    justify-content: center;  
+    align-items: center;       
     text-align: center;
-    padding: 10px;
 }
+
+
+@media (max-width: 768px) {
+  .image-wrapper img {
+    max-width: 80vw;
+  }
+}
+#imageContainer {
+  font-size: 20px;
+  color: rgb(107, 154, 119);
+  display: block;              /* switch from inline-block to block */
+  margin: 20px auto;           /* centers block horizontally */
+  text-align: center;
+  padding: 10px;
+  width: fit-content;          /* optional: shrink to content width */
+}
+.image-wrapper img:hover {
+  transform: scale(1.02);
+}
+.image-wrapper:empty {
+  display: none;
+}
+
+
 .loader {
     border: 16px solid #f3f3f3; /* Light grey */
     border-top: 16px solid #3498db; /* Blue */
     border-radius: 50%;
+    justify-content: center; 
+    align-items: center;
     width: 120px;
     height: 120px;
     animation: spin 2s linear infinite;
 }
-  
 @keyframes spin {
     0% { transform: rotate(0deg); }
     100% { transform: rotate(360deg); }
 }
 
 #restart {
-    margin-left: 75%;
     border: solid 5px rgb(249, 118, 57);
     color: rgb(249, 118, 57);
     font-size: 22px;
     cursor: pointer;
+}
+#restart_box {
+    width: 10vw;
+    position: fixed;     
+    bottom: 20px;     
+    right: 20px;
+}
+#restart-info-btn {
+    float: right;
+    margin: 5px;
 }
 
 

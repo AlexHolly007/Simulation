@@ -9,23 +9,43 @@
 from fastapi import FastAPI, Request
 from fastapi.responses import JSONResponse, HTMLResponse
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.responses import HTMLResponse
+from fastapi.staticfiles import StaticFiles
+
 from pydantic import BaseModel
 import requests, json, base64, tempfile, os
-from openai import OpenAI
+from openai import OpenAI, AsyncOpenAI
 from dotenv import load_dotenv
 import uvicorn
+import httpx
+
+#dev
+from starlette.staticfiles import StaticFiles
+
 
 #loading api keys
 ##create a .env file containing OPENAI_API_KEY variable set to key
-load_dotenv()
-client = OpenAI()
+load_dotenv() #fills env variables for keys
+MICROSERVICE_URL = os.getenv("MICROSERVICE_URL", "http://localhost:12121") #grab docker microservice end if there
 
-#app = Flask(__name__)
-app = FastAPI(title="Story Engine")
+client = AsyncOpenAI()
+# client = OpenAI()
+app = FastAPI()
 
-@app.route("/")
-def main():
-    return "API endpoint for item simulation"
+#noncaching for development to update no matter browser caching
+class NoCacheStaticFiles(StaticFiles):
+    async def get_response(self, path, scope):
+        response = await super().get_response(path, scope)
+        response.headers["Cache-Control"] = "no-store"
+        return response
+    
+
+#no frontend, just serve static files
+app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
+@app.get("/", response_class=HTMLResponse)
+async def serve_index():
+    with open("templates/index.html") as f:
+        return f.read()
 
 
 app.add_middleware(
@@ -39,6 +59,7 @@ app.add_middleware(
 
 #######
 # Called to generate a response given the background of the story
+# This is called by the generate response API endpoint below
 # Sets the tone for the engine.
 def get_story_response(player_input, story_state, chat_history, next_occurence):
     """
@@ -122,7 +143,7 @@ def get_story_response(player_input, story_state, chat_history, next_occurence):
 
 
 
-
+#LOOKS LIKE THIS BECAUSE WE ALWAYS EXPECT JSON OBJECT (DICTIONARY)
 class GenerateRequest(BaseModel):
     user_input: str
     chat_history: list
@@ -155,8 +176,8 @@ def generate_response(data: GenerateRequest):
         'make a catastrophic obsticle happen': 0.08,
         'make the story tragically end': 0.05,
     }
-    occurence_response = requests.post('http://localhost:12121/random_num', 
-                                       json={"probs": possible_occurences})
+    #call microservice
+    occurence_response = requests.post(f'{MICROSERVICE_URL}/random_num', json={"probs": possible_occurences})
     
     json_occurence = occurence_response.json()
     occurence = json_occurence.get('result')
@@ -168,7 +189,7 @@ def generate_response(data: GenerateRequest):
 
     print("story state 2: ",story_state)
 
-    chat_history.append({'role': 'assistant', 'content': story_response_text})
+    chat_history.append([story_response_text])
 
     print('DONE WITH GPT API SENDING BACK TO JAVA FRONTEND\n')
     return {"response": story_response_text, "chat_history": chat_history, "story_state": story_state}
@@ -189,6 +210,7 @@ class PictureRequest(BaseModel):
 @app.post("/get_picture")
 def get_picture(data: PictureRequest):
     #chat history and story state for image context
+    print("STARTING IMAGE BACKEND CALL FROM FASTAPI")
     chat_history = data.chat_history
     story_state = data.story_state
     style = data.style
@@ -203,7 +225,7 @@ def get_picture(data: PictureRequest):
     
     #This is the first user prompt
     else:
-        story_summary = "NEW ACTION-->>>", chat_history[0] 
+        story_summary = "NEW ACTION-->>>", chat_history[0]
         context_text = f"The story so far: {story_summary}\nStory State: {story_state}\nArt style: {style}"
 
     last_image_path = None
@@ -223,13 +245,13 @@ def get_picture(data: PictureRequest):
     img_response = None
     new_image_base64 = None
     #generate the image continue, or first image
-    if last_image_base64:
+    if last_image_path:
         # if you want to visually reference the previous image for consistency
         img_response = client.images.edit(
             model="gpt-image-1",
             prompt=gpt_image_prompt,
             size="1024x1024",
-            image=[open(last_image_base64, "rb")]
+            image=[open(last_image_path, "rb")]
         )
 
     else:
@@ -248,7 +270,33 @@ def get_picture(data: PictureRequest):
     if last_image_path:
         os.remove(last_image_path)
 
+    print("BACKEND RETURNING IMAGE TO FRONT END")
+
     return ({"image": new_image_base64})
+
+
+
+##Get picture style fastendpoint
+# This endpoint is here because cant use env variables, and so it doesnt know 
+# when the microservice endpoint changes.
+# This is a redirect from the javascript to the microservice, and return as well
+class picture_probs(BaseModel):
+    probs: dict[str, float]
+@app.post('/picture_style')
+async def picture_style(data: picture_probs):
+    probs = data.probs
+
+    #httpx yeilds this thread while waiting for a response
+    async with httpx.AsyncClient() as client:
+        response = await client.post(f"{MICROSERVICE_URL}/random_num", json=probs)
+
+    json_occurence = response.json()
+    occurence = json_occurence.get("result")
+
+    return {"occurence": occurence}
+
+
+
 
 
 if __name__ == "__main__":
