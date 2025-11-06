@@ -61,7 +61,7 @@ app.add_middleware(
 # Called to generate a response given the background of the story
 # This is called by the generate response API endpoint below
 # Sets the tone for the engine.
-def get_story_response(player_input, story_state, chat_history, next_occurence):
+async def get_story_response(player_input, story_state, chat_history, next_occurence):
     """
     player_input: str - The player's latest action or dialogue
     story_state: dict - Current story info (Location, Items, MainChar, NPCs, Goals)
@@ -112,7 +112,7 @@ def get_story_response(player_input, story_state, chat_history, next_occurence):
     messages = system_messages + chat_history + [{"role": "user", "content": player_input}] + Output_intructions
 
     #SEND HER OFF
-    response = client.chat.completions.create(
+    response = await client.chat.completions.create(
         model="gpt-5", 
         messages=messages,
         #max_completion_tokens= 400,
@@ -153,7 +153,7 @@ class GenerateRequest(BaseModel):
 # Sends: The user input, along with the history of chats within this story
 # Returns: A generative text response based on the history of the OpenAI responses to create a cohesive story.
 @app.post("/generate_response")
-def generate_response(data: GenerateRequest):
+async def generate_response(data: GenerateRequest):
     user_input = data.user_input
     chat_history = data.chat_history
     story_state = data.story_state
@@ -185,7 +185,7 @@ def generate_response(data: GenerateRequest):
 
     #
     # Creates the message to be sent to open-ai. Uses the chat history, the occurence, and the new user input.  
-    story_response_text, story_state = get_story_response(user_input, story_state, chat_history, occurence)
+    story_response_text, story_state = await get_story_response(user_input, story_state, chat_history, occurence)
 
     print("story state 2: ",story_state)
 
@@ -208,7 +208,7 @@ class PictureRequest(BaseModel):
 #
 #
 @app.post("/get_picture")
-def get_picture(data: PictureRequest):
+async def get_picture(data: PictureRequest):
     #chat history and story state for image context
     print("STARTING IMAGE BACKEND CALL FROM FASTAPI")
     chat_history = data.chat_history
@@ -247,7 +247,7 @@ def get_picture(data: PictureRequest):
     #generate the image continue, or first image
     if last_image_path:
         # if you want to visually reference the previous image for consistency
-        img_response = client.images.edit(
+        img_response = await client.images.edit(
             model="gpt-image-1",
             prompt=gpt_image_prompt,
             size="1024x1024",
@@ -256,7 +256,7 @@ def get_picture(data: PictureRequest):
 
     else:
         #without a prior image
-        img_response = client.images.generate(
+        img_response = await client.images.generate(
             model="gpt-image-1",
             prompt=gpt_image_prompt,
             n=1,
@@ -287,13 +287,15 @@ async def picture_style(data: picture_probs):
     probs = data.probs
 
     #httpx yeilds this thread while waiting for a response
-    async with httpx.AsyncClient() as client:
-        response = await client.post(f"{MICROSERVICE_URL}/random_num", json=probs)
+    response = None
+    try:
+        async with httpx.AsyncClient() as client:
+            response = await client.post(f"{MICROSERVICE_URL}/random_num", json=probs)
+    
+    except Exception as e:
+        print(f"ISSUE WITH CALLING MICROSERVICE FOR STYLE: {e} \n Response = {response}")
 
-    json_occurence = response.json()
-    occurence = json_occurence.get("result")
-
-    return {"occurence": occurence}
+    return response
 
 
 
@@ -302,4 +304,4 @@ async def picture_style(data: picture_probs):
 if __name__ == "__main__":
     uvicorn.run("app:app", host="127.0.0.1", port=45454, reload=True)
 
-#START WITH python3 app.py
+#START WITH python3 app.py, autosetuo wuth vucirn

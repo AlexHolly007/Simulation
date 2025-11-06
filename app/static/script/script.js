@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         // fetch microservice
         try {
-            const response = await fetch('http://localhost:12121/random_num', {
+            const response = await fetch('/picture_style', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -141,7 +141,6 @@ document.addEventListener('DOMContentLoaded', function () {
             }
 
             const data = await response.json();
-            console.log("Picture response:", data);
 
             //save image for next time
             last_image_base64 = data.image;
