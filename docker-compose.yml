@@ -1,5 +1,4 @@
 #docker-compose
-version: "3.9"
 
 #services, these are seperate containers that are going to be used in the image
 #give any name to the containers
@@ -25,7 +24,7 @@ services:
     #can set environment variables in this container, 
     #this isnt needed, but wanted to test it out, now i call the env var when calling microservice
     environment:
-      - MICROSERVICE_URL=http://microservice:12121
+      - MICROSERVICE_URL=http://microservice-api:12121
     
     #automatic resart on crash
     #restart: always

@@ -26,7 +26,6 @@ app.add_middleware(
 #define data input
 class Probabilities(BaseModel):
     probs: Dict[str, float]
-
 ##
 ###
 ## This input to this function is a dictionary containing strings along with a probability for each string

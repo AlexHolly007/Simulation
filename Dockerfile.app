@@ -6,6 +6,7 @@ FROM python:3.11-slim
 
 #set default base directory for running CMD as seen bottom of script
 WORKDIR /app
+COPY .env .
 
 #This stops python from writing pyc cache file, not needed but stops a bunch of clutter
 ENV PYTHONDONTWRITEBYTECODE=1

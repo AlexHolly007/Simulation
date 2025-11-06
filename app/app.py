@@ -4,6 +4,11 @@
 #     This file uses http post requests when requesting information from other API and returns JSON bodys that
 #     include the needed responses
 #########
+#TODO  Optional: Async the picture generation with the chat generation to be a little quicker
+        #NOTE* since image is generated at same time at text, it no longer can use the most recent text
+            #need to update the image generation prompts with that in mind
+
+#TODO  Docker deploy fully
 #########
 
 from fastapi import FastAPI, Request
@@ -14,43 +19,48 @@ from fastapi.staticfiles import StaticFiles
 
 from pydantic import BaseModel
 import requests, json, base64, tempfile, os
-from openai import OpenAI, AsyncOpenAI
+from pathlib import Path
+from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import uvicorn
 import httpx
-
-#dev
-from starlette.staticfiles import StaticFiles
-
 
 #loading api keys
 ##create a .env file containing OPENAI_API_KEY variable set to key
 load_dotenv() #fills env variables for keys
 MICROSERVICE_URL = os.getenv("MICROSERVICE_URL", "http://localhost:12121") #grab docker microservice end if there
+BASE_DIR = Path(__file__).resolve().parent
 
 client = AsyncOpenAI()
 # client = OpenAI()
 app = FastAPI()
 
+
+
+################.  DEV   ############################################
+from starlette.staticfiles import StaticFiles
 #noncaching for development to update no matter browser caching
 class NoCacheStaticFiles(StaticFiles):
     async def get_response(self, path, scope):
         response = await super().get_response(path, scope)
         response.headers["Cache-Control"] = "no-store"
         return response
-    
+app.mount(f"/static", NoCacheStaticFiles(directory=f"{BASE_DIR}/static"), name="static")
+####################################################################################
 
-#no frontend, just serve static files
-app.mount("/static", NoCacheStaticFiles(directory="static"), name="static")
+
+
+#front end just on this api port for now
+#serve static index.html
 @app.get("/", response_class=HTMLResponse)
 async def serve_index():
-    with open("templates/index.html") as f:
+    with open(f"{BASE_DIR}/templates/index.html") as f:
         return f.read()
 
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],  # or your frontend domain
+    allow_origins=["*"], 
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
@@ -78,7 +88,7 @@ async def get_story_response(player_input, story_state, chat_history, next_occur
                 "The user writes prompts to advance the story, and you describe vivid, concise outcomes based on their input and any provided continuation "
                 "The user is not part of the story unless explicitly stated. "
                 "You may introduce environmental or character actions when needed, but the user dictates direction most of the time. "
-                "Always match the user’s writing style, tone, and genre. Use common, natural language. "
+                "Always match the user’s writing style, tone, and genre. Use common, natural language. Do not get too poetic. "
                 "Keep responses under 120 tokens and describe only one clear event or change per turn. "
                 "Avoid asking questions; show possibilities through action and detail instead. "
                 "Maintain consistent pacing, tone, and formatting. "
@@ -108,8 +118,14 @@ async def get_story_response(player_input, story_state, chat_history, next_occur
         }
     ]
 
+    #Add player input to the history
+    chat_history.append({"role": "user", "content": player_input})
+
+    if len(chat_history) >= 6:
+        chat_history = chat_history[-5:]
+
     #Compile package to send
-    messages = system_messages + chat_history + [{"role": "user", "content": player_input}] + Output_intructions
+    messages = system_messages + chat_history + Output_intructions
 
     #SEND HER OFF
     response = await client.chat.completions.create(
@@ -189,9 +205,9 @@ async def generate_response(data: GenerateRequest):
 
     print("story state 2: ",story_state)
 
-    chat_history.append([story_response_text])
+    chat_history.append({"role": "assistant", "content": story_response_text})
 
-    print('DONE WITH GPT API SENDING BACK TO JAVA FRONTEND\n')
+    print('DONE WITH GPT TEXT RESPONSE SENDING BACK TO JAVA FRONTEND\n')
     return {"response": story_response_text, "chat_history": chat_history, "story_state": story_state}
 
 
@@ -204,9 +220,6 @@ class PictureRequest(BaseModel):
     last_image: str | None = None
 ####
 # 
-#
-#
-#
 @app.post("/get_picture")
 async def get_picture(data: PictureRequest):
     #chat history and story state for image context
@@ -219,14 +232,15 @@ async def get_picture(data: PictureRequest):
 
     context_text = ''
     #there has been continuation
-    if len(chat_history) > 1:
-        story_summary = "\n--NEW ACTION-->>>".join(chat_history[-2:])  # use only the last 2 messages to save tokens
-        context_text = f"The story so far: LAST ACTION-->>{story_summary}\nStory State: {story_state}\nArt style: {style}"
+    if len(chat_history) > 2:
+        story_summary = f"\n--NEW ACTION-->>> {chat_history[-1]['content']}"  # use only the last 2 messages to save tokens
+        context_text = f"The story so far: LAST ACTION-->>{chat_history[-3]['content']}{story_summary}\nStory State: {story_state}\nArt style: {style}"
     
     #This is the first user prompt
     else:
-        story_summary = "NEW ACTION-->>>", chat_history[0]
+        story_summary = "NEW ACTION-->>>", chat_history[-1]['content']
         context_text = f"The story so far: {story_summary}\nStory State: {story_state}\nArt style: {style}"
+
 
     last_image_path = None
     if last_image_base64:
@@ -235,6 +249,7 @@ async def get_picture(data: PictureRequest):
         temp_file.write(image_bytes)
         temp_file.close()
         last_image_path = temp_file.name
+
 
     #input of the context and the last image
     gpt_image_prompt = f"You are a creative scene designer. This is an ongoing story, you need to generate the next image to give \
@@ -284,19 +299,18 @@ class picture_probs(BaseModel):
     probs: dict[str, float]
 @app.post('/picture_style')
 async def picture_style(data: picture_probs):
-    probs = data.probs
 
     #httpx yeilds this thread while waiting for a response
     response = None
     try:
         async with httpx.AsyncClient() as client:
-            response = await client.post(f"{MICROSERVICE_URL}/random_num", json=probs)
+            response = await client.post(f"{MICROSERVICE_URL}/random_num", json=data.model_dump()) #json={'probs': data.probs})
+            return response.json()
     
     except Exception as e:
         print(f"ISSUE WITH CALLING MICROSERVICE FOR STYLE: {e} \n Response = {response}")
-
-    return response
-
+        return {"result": None}
+    
 
 
 
