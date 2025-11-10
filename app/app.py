@@ -8,7 +8,7 @@
         #NOTE* since image is generated at same time at text, it no longer can use the most recent text
             #need to update the image generation prompts with that in mind
 
-#TODO  Docker deploy fully
+#TODO  check credits on openai, deploy to aws
 #########
 
 from fastapi import FastAPI, Request

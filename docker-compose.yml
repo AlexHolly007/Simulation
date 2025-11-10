@@ -37,3 +37,5 @@ services:
     ports:
       - "12121:12121"
     restart: always
+
+#Docker compose up --build
