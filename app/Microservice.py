@@ -35,9 +35,10 @@ class Probabilities(BaseModel):
 def modify_data(data: Probabilities):
     items_and_probs = data.probs
 
-    print("BEEN HIT WITH REQUEST")
+    print("HIT WITH RANDOM RESPONSE REQUEST")
     chosen_item = choose_item(items_and_probs)
     print(f"Chosen Item: {chosen_item}")
+    print("RETURNING TO MAIN APP")
 
     return {"result": chosen_item}
 
@@ -50,6 +51,7 @@ def choose_item(probabilities):
     return chosen_item
 
 if __name__ == "__main__":
+    #only called with command below. docker container doesnt call this
     uvicorn.run("Microservice:app", host="127.0.0.1", port=12121, reload=True)
 
 #START UP WITH  python3 Microservice.py

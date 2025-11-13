@@ -24,6 +24,7 @@ from openai import AsyncOpenAI
 from dotenv import load_dotenv
 import uvicorn
 import httpx
+import os
 
 #loading api keys
 ##create a .env file containing OPENAI_API_KEY variable set to key
@@ -36,17 +37,18 @@ client = AsyncOpenAI()
 app = FastAPI()
 
 
+#no-cache static files during development
+if os.getenv("ENVIRONMENT") == "development":
+    from starlette.staticfiles import StaticFiles
+    class NoCacheStaticFiles(StaticFiles):
+        async def get_response(self, path, scope):
+            response = await super().get_response(path, scope)
+            response.headers["Cache-Control"] = "no-store"
+            return response
+    app.mount(f"/static", NoCacheStaticFiles(directory=f"{BASE_DIR}/static"), name="static")
+else:
+    app.mount(f"/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
 
-################.  DEV   ############################################
-from starlette.staticfiles import StaticFiles
-#noncaching for development to update no matter browser caching
-class NoCacheStaticFiles(StaticFiles):
-    async def get_response(self, path, scope):
-        response = await super().get_response(path, scope)
-        response.headers["Cache-Control"] = "no-store"
-        return response
-app.mount(f"/static", NoCacheStaticFiles(directory=f"{BASE_DIR}/static"), name="static")
-####################################################################################
 
 
 
@@ -60,10 +62,12 @@ async def serve_index():
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"], 
+    allow_origins=[
+        "http://localhost:45454",
+    ],
     allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
+    allow_methods=["GET", "POST"],
+    allow_headers=["Content-Type"],
 )
 
 
@@ -173,10 +177,10 @@ async def generate_response(data: GenerateRequest):
     user_input = data.user_input
     chat_history = data.chat_history
     story_state = data.story_state
-
-    print("\nhistory:", chat_history)
-    print("story state: ",story_state)
-    print("input: ", user_input.strip())
+    # print("\nhistory:", chat_history)
+    # print("story state: ",story_state)
+    # print("input: ", user_input.strip())
+    print("HIT WITH GPT TEXT GENERATION REQUEST")
 
     ###
     ## The possible occurences to be sent to the microservice
@@ -197,17 +201,15 @@ async def generate_response(data: GenerateRequest):
     
     json_occurence = occurence_response.json()
     occurence = json_occurence.get('result')
-    print(f"occurance response: {occurence}")
 
     #
     # Creates the message to be sent to open-ai. Uses the chat history, the occurence, and the new user input.  
     story_response_text, story_state = await get_story_response(user_input, story_state, chat_history, occurence)
 
-    print("story state 2: ",story_state)
 
     chat_history.append({"role": "assistant", "content": story_response_text})
 
-    print('DONE WITH GPT TEXT RESPONSE SENDING BACK TO JAVA FRONTEND\n')
+    print('DONE WITH GPT TEXT RESPONSE, SENDING TO FRONTEND\n')
     return {"response": story_response_text, "chat_history": chat_history, "story_state": story_state}
 
 
@@ -223,7 +225,7 @@ class PictureRequest(BaseModel):
 @app.post("/get_picture")
 async def get_picture(data: PictureRequest):
     #chat history and story state for image context
-    print("STARTING IMAGE BACKEND CALL FROM FASTAPI")
+    print("HIT WITH IMAGE GENERATION REQUEST")
     chat_history = data.chat_history
     story_state = data.story_state
     style = data.style
@@ -285,7 +287,7 @@ async def get_picture(data: PictureRequest):
     if last_image_path:
         os.remove(last_image_path)
 
-    print("BACKEND RETURNING IMAGE TO FRONT END")
+    print("RETURNING IMAGE GENERATION TO FRONTEND")
 
     return ({"image": new_image_base64})
 
@@ -300,6 +302,7 @@ class picture_probs(BaseModel):
 @app.post('/picture_style')
 async def picture_style(data: picture_probs):
 
+    print("TEST MUTHAFUCKKKA 3")
     #httpx yeilds this thread while waiting for a response
     response = None
     try:
@@ -310,12 +313,11 @@ async def picture_style(data: picture_probs):
     except Exception as e:
         print(f"ISSUE WITH CALLING MICROSERVICE FOR STYLE: {e} \n Response = {response}")
         return {"result": None}
-    
-
 
 
 
 if __name__ == "__main__":
+    #production, not called when using dockerfile
     uvicorn.run("app:app", host="127.0.0.1", port=45454, reload=True)
 
 #START WITH python3 app.py, autosetuo wuth vucirn

@@ -9,7 +9,8 @@ services:
       context: .
       dockerfile: Dockerfile.app
     
-    #name container to see once its build in docker
+    #name container/image to see once its build in docker
+    image: simulation_main_app_img
     container_name: simulation_main_app
 
     #need to specify ports. <outside port of docker deployment>:<port it forwards to on the containers>
@@ -33,6 +34,7 @@ services:
     build:
       context: .
       dockerfile: Dockerfile.micro
+    image: simulation_microservice_img
     container_name: simulation_microservice
     ports:
       - "12121:12121"
