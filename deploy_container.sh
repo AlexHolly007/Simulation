@@ -22,11 +22,54 @@ mkdir -p certs certbot-data nginx/conf.d
 #local runs use self-signed cert
 if [ "$DOMAIN" = "localhost" ]; then
   mkdir -p certs/live/localhost
-  openssl req -x509 -newkey rsa:4096 -keyout certs/live/localhost/privkey.pem -out certs/live/localhost/fullchain.pem -days 365 -nodes -subj "/CN=localhost"
+  openssl req -x509 -newkey rsa:4096 \
+    -keyout certs/live/localhost/privkey.pem \
+    -out certs/live/localhost/fullchain.pem \
+    -days 365 -nodes -subj "/CN=localhost"
 
-  #load the hidden localhost(developemet) conf, to test 443, htttps to work, but with self made cert only
-  #this was not being seen before moved to conf.d folder
-  mv nginx/hidden_local_ssl.conf nginx/conf.d/ssl.conf
+  #add a congiguration file that will now be used in place of the other one
+  #enabeling https, 443
+  cat > nginx/conf.d/ssl.conf <<EOF
+server {
+    listen 80;
+    server_name localhost;
+
+    location /.well-known/acme-challenge/ {
+        alias /var/www/certbot/.well-known/acme-challenge/;
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name localhost;
+
+    ssl_certificate /etc/letsencrypt/live/localhost/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/localhost/privkey.pem;
+
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://sim_main_api;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
 
   #start up service for localhost
   docker-compose up --build -d
@@ -58,9 +101,49 @@ docker-compose run --rm certbot certonly --webroot -w /var/www/certbot \
   -d "${DOMAIN}" -m "${EMAIL}" --agree-tos --non-interactive --register-unsafely-without-email
 
 
-#move the new confid file that uses ssl 443 because we have our cert
-#this was not active before because nginx is looking in nginx/conf.d for more config files previously
-mv nginx/hidden_prod_ssl.conf nginx/conf.d/ssl.conf
+#now we create the nginx conf file with the https(443) being used
+#this will be used on top of the base config file
+cat > nginx/conf.d/ssl.conf <<EOF
+server {
+    listen 80;
+    server_name ${DOMAIN};
+
+    location /.well-known/acme-challenge/ {
+        alias /var/www/certbot/.well-known/acme-challenge/;
+    }
+
+    location / {
+        return 301 https://\$host\$request_uri;
+    }
+}
+
+server {
+    listen 443 ssl http2;
+    server_name ${DOMAIN};
+
+    ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
+    ssl_certificate_key /etc/letsencrypt/live/${DOMAIN}/privkey.pem;
+    ssl_protocols TLSv1.2 TLSv1.3;
+    ssl_ciphers HIGH:!aNULL:!MD5;
+    ssl_prefer_server_ciphers on;
+    add_header Strict-Transport-Security "max-age=63072000; includeSubDomains; preload" always;
+
+    root /usr/share/nginx/html;
+    index index.html;
+
+    location / {
+        try_files \$uri \$uri/ /index.html;
+    }
+
+    location /api/ {
+        proxy_pass http://sim_main_api;
+        proxy_set_header Host \$host;
+        proxy_set_header X-Real-IP \$remote_addr;
+        proxy_set_header X-Forwarded-For \$proxy_add_x_forwarded_for;
+        proxy_set_header X-Forwarded-Proto \$scheme;
+    }
+}
+EOF
 
 #reload nginx to get the updated ssl
 #nginx uses the last loaded config block, so now http port 80 requests gotot the new block above instead
