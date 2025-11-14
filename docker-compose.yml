@@ -49,19 +49,6 @@ services:
       - simulation-network
 
 
-  certbot:
-    image: certbot/certbot
-    container_name: certbot
-    volumes:
-      - ./certs:/etc/letsencrypt
-      - ./certbot-data:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot -d ${DOMAIN:-localhost} --email ${EMAIL:-alex@gmail.com} --agree-tos --non-interactive --register-unsafely-without-email || echo "Cert generation skipped"
-    networks:
-      - simulation-network
-    profiles:
-      - donotstart
-
-
   nginx:
     image: nginx:latest
     container_name: nginx_gateway
@@ -75,9 +62,23 @@ services:
       - ./frontend:/usr/share/nginx/html:ro
       - ./certs/live/${DOMAIN:-localhost}:/etc/nginx/certs:ro
     #restart: always
-
     networks:
       - simulation-network
+
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certs:/etc/letsencrypt
+      - ./certbot-data:/var/www/certbot
+    command: certonly --webroot -w /var/www/certbot -d ${DOMAIN:-localhost} --email ${EMAIL:-alex@gmail.com} --agree-tos --non-interactive --register-unsafely-without-email || echo "Cert generation skipped"
+    depends_on:
+      - nginx
+    networks:
+      - simulation-network
+    profiles:
+      - donotstart
 
 networks:
   simulation-network:

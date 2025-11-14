@@ -16,13 +16,18 @@ docker rmi sim_main_api_img sim_micro_img -f 2>/dev/null
 
 mkdir -p certs certbot-data
 
-#self-gen certis when on localhost to check https with nginx
+#self-gen certs when on localhost to check https with nginx
 if [ "$DOMAIN" = "localhost" ]; then
   mkdir -p certs/live/localhost
   openssl req -x509 -newkey rsa:4096 -keyout certs/live/localhost/privkey.pem -out certs/live/localhost/fullchain.pem -days 365 -nodes -subj "/CN=localhost"
-else
-  #get real encrypt cert for production
+fi
+
+#start all services (nginx, sim-main-api, sim-micro-api)
+docker-compose up --build -d
+
+#get real encrypt cert for production
+if [ "$DOMAIN" != "localhost" ]; then
+  sleep 5
   docker-compose run --rm certbot
 fi
 
-docker-compose up --build
