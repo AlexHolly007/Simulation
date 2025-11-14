@@ -58,9 +58,11 @@ services:
     depends_on:
       - sim-main-api
     volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./nginx/conf.d:/etc/nginx/conf.d:ro
       - ./frontend:/usr/share/nginx/html:ro
-      - ./certs/live/${DOMAIN:-localhost}:/etc/nginx/certs:ro
+      - ./certs:/etc/letsencrypt:ro
+      - ./certbot-data:/var/www/certbot:ro
     #restart: always
     networks:
       - simulation-network
@@ -72,7 +74,7 @@ services:
     volumes:
       - ./certs:/etc/letsencrypt
       - ./certbot-data:/var/www/certbot
-    command: certonly --webroot -w /var/www/certbot -d ${DOMAIN:-localhost} --email ${EMAIL:-alex@gmail.com} --agree-tos --non-interactive --register-unsafely-without-email || echo "Cert generation skipped"
+    #command: certonly --webroot -w /var/www/certbot -d ${DOMAIN:-localhost} --email ${EMAIL:-alex@gmail.com} --agree-tos --non-interactive --register-unsafely-without-email || echo "Cert generation skipped"
     depends_on:
       - nginx
     networks:
