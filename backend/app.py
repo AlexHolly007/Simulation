@@ -37,33 +37,10 @@ client = AsyncOpenAI()
 app = FastAPI()
 
 
-#no-cache static files during development
-if os.getenv("ENVIRONMENT") == "development":
-    from starlette.staticfiles import StaticFiles
-    class NoCacheStaticFiles(StaticFiles):
-        async def get_response(self, path, scope):
-            response = await super().get_response(path, scope)
-            response.headers["Cache-Control"] = "no-store"
-            return response
-    app.mount(f"/static", NoCacheStaticFiles(directory=f"{BASE_DIR}/static"), name="static")
-else:
-    app.mount(f"/static", StaticFiles(directory=f"{BASE_DIR}/static"), name="static")
-
-
-
-
-#front end just on this api port for now
-#serve static index.html
-@app.get("/", response_class=HTMLResponse)
-async def serve_index():
-    with open(f"{BASE_DIR}/templates/index.html") as f:
-        return f.read()
-
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=[
-        "http://localhost:45454",
+        "*",
     ],
     allow_credentials=True,
     allow_methods=["GET", "POST"],
@@ -172,7 +149,7 @@ class GenerateRequest(BaseModel):
 # OpenAi response retrieval
 # Sends: The user input, along with the history of chats within this story
 # Returns: A generative text response based on the history of the OpenAI responses to create a cohesive story.
-@app.post("/generate_response")
+@app.post("/api/generate_response")
 async def generate_response(data: GenerateRequest):
     user_input = data.user_input
     chat_history = data.chat_history
@@ -222,7 +199,7 @@ class PictureRequest(BaseModel):
     last_image: str | None = None
 ####
 # 
-@app.post("/get_picture")
+@app.post("/api/get_picture")
 async def get_picture(data: PictureRequest):
     #chat history and story state for image context
     print("HIT WITH IMAGE GENERATION REQUEST")
@@ -299,10 +276,9 @@ async def get_picture(data: PictureRequest):
 # This is a redirect from the javascript to the microservice, and return as well
 class picture_probs(BaseModel):
     probs: dict[str, float]
-@app.post('/picture_style')
+@app.post('/api/picture_style')
 async def picture_style(data: picture_probs):
 
-    print("TEST MUTHAFUCKKKA 3")
     #httpx yeilds this thread while waiting for a response
     response = None
     try:

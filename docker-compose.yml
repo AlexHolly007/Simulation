@@ -3,41 +3,82 @@
 #services, these are seperate containers that are going to be used in the image
 #give any name to the containers
 services:
-  main-and-static-frontend:
+
+  sim-main-api:
     #build is needed, give the dockerfile, and what dir the dockerfile is in
     build:
       context: .
       dockerfile: Dockerfile.app
     
     #name container/image to see once its build in docker
-    image: simulation_main_app_img
-    container_name: simulation_main_app
+    image: sim_main_api_img
+    container_name: sim_main_api
 
     #need to specify ports. <outside port of docker deployment>:<port it forwards to on the containers>
     #these are often the same, but can make it different
-    ports:
-      - "45454:45454"
+    expose:
+      - "45454"
 
     #if it should wait on other services, this isnt needed here but wanted to test it out
     depends_on:
-      - microservice-api
+      - sim-micro-api
 
     #can set environment variables in this container, 
     #this isnt needed, but wanted to test it out, now i call the env var when calling microservice
     environment:
-      - MICROSERVICE_URL=http://microservice-api:12121
+      - MICROSERVICE_URL=http://sim-micro-api:12121
     
     #automatic resart on crash
     #restart: always
 
-  microservice-api:
+    networks:
+      - simulation-network
+
+
+  sim-micro-api:
     build:
       context: .
       dockerfile: Dockerfile.micro
-    image: simulation_microservice_img
-    container_name: simulation_microservice
-    ports:
-      - "12121:12121"
-    restart: always
+    image: sim_micro_img
+    container_name: sim_micro_api
+    expose:
+      - "12121"
+    #restart: always
 
-#Docker compose up --build
+    networks:
+      - simulation-network
+
+
+  certbot:
+    image: certbot/certbot
+    container_name: certbot
+    volumes:
+      - ./certs:/etc/letsencrypt
+      - ./certbot-data:/var/www/certbot
+    command: certonly --webroot -w /var/www/certbot -d ${DOMAIN:-localhost} --email ${EMAIL:-alex@gmail.com} --agree-tos --non-interactive --register-unsafely-without-email || echo "Cert generation skipped"
+    networks:
+      - simulation-network
+    profiles:
+      - donotstart
+
+
+  nginx:
+    image: nginx:latest
+    container_name: nginx_gateway
+    ports:
+      - "80:80"
+      - "443:443"
+    depends_on:
+      - sim-main-api
+    volumes:
+      - ./nginx.conf:/etc/nginx/nginx.conf:ro
+      - ./frontend:/usr/share/nginx/html:ro
+      - ./certs/live/${DOMAIN:-localhost}:/etc/nginx/certs:ro
+    #restart: always
+
+    networks:
+      - simulation-network
+
+networks:
+  simulation-network:
+    driver: bridge

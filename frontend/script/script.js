@@ -27,7 +27,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
         // fetch microservice
         try {
-            const response = await fetch('/picture_style', {
+            const response = await fetch('/api/picture_style', {
                 method: 'POST',
                 headers: { 'Content-Type': 'application/json' },
                 body: JSON.stringify(payload)
@@ -81,7 +81,7 @@ document.addEventListener('DOMContentLoaded', function () {
         };
 
         try {
-            const response = await fetch('/generate_response', {
+            const response = await fetch('/api/generate_response', {
                 method: 'POST',
                 body: JSON.stringify(payload),
                 headers: {'Content-Type': 'application/json',},
@@ -125,7 +125,7 @@ document.addEventListener('DOMContentLoaded', function () {
         }
 
         try{
-            const response = await fetch('/get_picture', {
+            const response = await fetch('/api/get_picture', {
                 method: 'POST',
                 body: JSON.stringify(payload),
                 headers: {

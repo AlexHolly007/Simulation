@@ -21,7 +21,7 @@ RUN pip install --no-cache-dir -r requirements.txt
 #now copy the app code into the file too
 #we put this down here, so it caches it last, and when app/ changes, it only goes back this far to rerun docker container
 #       if it was before the install command above, then that would have to be redone too every time app/ dir updates
-COPY app ./app
+COPY backend ./backend
 
 #this is just kinda documentation that its open on port 45454, doesnt do anything real.
 #not actually needed, but standard
@@ -29,4 +29,4 @@ EXPOSE 45454
 #need to call    docker run -p 45454:45454 myimage. for it to actually open the port
 
 # Start FastAPI (frontend)
-CMD ["uvicorn", "app.app:app", "--host", "0.0.0.0", "--port", "45454"]
+CMD ["uvicorn", "backend.app:app", "--host", "0.0.0.0", "--port", "45454"]
