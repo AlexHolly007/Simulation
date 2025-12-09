@@ -1,7 +1,7 @@
 # Dockerfile.app
 
 #base image, could use like ubuntu or whatever, 
-#but this is small debian based python image good for this
+#but this is small debian based python image good for this project
 FROM python:3.11-slim
 
 #set default base directory for running CMD as seen bottom of script

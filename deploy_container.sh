@@ -2,9 +2,7 @@
 
 set -euo pipefail
 
-# Load .env
 if [ -f .env ]; then
-  # export only non-empty lines not starting with #
   export $(grep -v '^\s*#' .env | xargs -r)
 else
   echo "config Error: .env file not found. Copy .env.example to .env and configure it"
@@ -44,7 +42,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name localhost;
 
     ssl_certificate /etc/letsencrypt/live/localhost/fullchain.pem;
@@ -118,7 +117,8 @@ server {
 }
 
 server {
-    listen 443 ssl http2;
+    listen 443 ssl;
+    http2 on;
     server_name ${DOMAIN};
 
     ssl_certificate /etc/letsencrypt/live/${DOMAIN}/fullchain.pem;
