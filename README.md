@@ -1,6 +1,6 @@
 # Simulation Game
 
-Live deployment: https://sim-alex.com
+Live deployment on AWS: https://sim-alex.com
 
 Interactive, open-ended “choose your own adventure” played through short prompts. The FastAPI backend calls OpenAI for concise story beats and image generation, while a small microservice injects weighted randomness to keep the narrative surprising. A static frontend (HTML/CSS/JS) displays the text and images.
 
